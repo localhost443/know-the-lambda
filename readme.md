@@ -46,25 +46,33 @@ Asynchronous events do not require an immediate response. The event source sends
 ## Synchronous Event Flow
 
 ### Frontend Load Balancer
-
+![SVG Animation](1_request_receieved_.svg)
 1. When a new request (event) arrives, it is first handled by the **Frontend Load Balancer**.
 2. The load balancer identifies the appropriate **Frontend Invoke Service** based on the availability zone and routes the event there.
 
 ### Frontend Invoke Service
 
-1. The **Frontend Invoke Service** performs initial event processing.
-2. It then passes the event to the following services:
-   - **Counting Service**: Validates if the request exceeds any predefined quotas or limits.
-   - **Assignment Service**: Responsible for downloading the function code and executing it in a **microVM**. If no microVM is available, the event is forwarded to the **Placement Service**.
+1. The **Frontend Invoke Service** performs initial event processing. it works with **Authentication**, **Authorization** and calls the **Counting Service**
+
+### Counting Service
+![SVG Animation](2_counting_service.svg)
+It checks things like ***Account Concurrency Limits***, ***Reserved concurrency*** settings on the functions to make sure you are not exceeding any limits. basically it validates if the request exceeds any predefined quotas or limits. and then it calls the ***Assignment Service***
+
+### Assignment Service
+![SVG Animation](3_assignment_service.svg)
+Its responsible for routing requests to your worker hosts (***Micro Vms***) which runs your codes. and responsible for downloading and executing your codes
+
+If your code has not been loaded to any of the worker nodes yet. or all the worker hosts is busy. then it will create a new execution environment, which is also known as ***Cold Start***
 
 ### Placement Service
-
+![SVG Animation](4_placement_serivce_cold_start.svg)
 1. The **Placement Service** is invoked when all microVMs are busy or no VM is running. So, need to be initialized.
 2. It uses machine learning to:
    - Select the optimal microVM.
    - Prepare a new execution environment (known as a **Cold Start**).
 3. Once ready, the microVM is handed back to the **Frontend Invoke Service**.
-
+Now that it transferred to the Frontend Invocation Service, it can run the code while the vm is **worm**
+![SVG Animation](4_without_anything.svg)
 ### Execution in MicroVM
 
 1. The **Assignment Service** triggers the Lambda function within the prepared microVM.
@@ -133,5 +141,3 @@ func main() {
 	lambda.Start(Handler)
 }
 ```
-
-## Now we will continue deploying this code into Lambda and understand how it works
